@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MarqueeBanner } from './components/MarqueeBanner';
+import { InstallPromptBanner } from './components/InstallPromptBanner';
 import { Header, ActiveTab } from './components/Header';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { AuthModal } from './components/AuthModal';
@@ -32,7 +33,10 @@ const MainApp: React.FC = () => {
       {/* 1. Continuous Top Scrolling Banner */}
       <MarqueeBanner />
 
-      {/* 2. Main Navigation Header */}
+      {/* 2. Install Prompt Notification Banner */}
+      <InstallPromptBanner />
+
+      {/* 3. Main Navigation Header */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}

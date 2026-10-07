@@ -1,4 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
+import http from 'http';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -43,6 +44,20 @@ const PORT = parseInt(process.env.PORT || '3000', 10);
 // Basic middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// PWA Service Worker & Manifest Endpoints with correct headers
+app.get('/sw.js', (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+  res.setHeader('Service-Worker-Allowed', '/');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.resolve(__dirname, 'public/sw.js'));
+});
+
+app.get(['/manifest.json', '/manifest.webmanifest'], (_req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'application/manifest+json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.sendFile(path.resolve(__dirname, 'public/manifest.json'));
+});
 
 // Global Rate Limit
 app.use('/api/', rateLimit(180, 60 * 1000));
@@ -936,16 +951,21 @@ app.post('/api/admin/reports/:id/dismiss', authenticateToken, requireAdmin, (req
 // ----------------------------------------------------
 async function startServer() {
   const isProd = process.env.NODE_ENV === 'production';
+  const httpServer = http.createServer(app);
 
   if (!isProd) {
     // Dev mode: dynamically mount Vite middleware
+    const isHmrDisabled = process.env.DISABLE_HMR === 'true';
     const { createServer } = await import('vite');
     const vite = await createServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        hmr: isHmrDisabled ? false : { server: httpServer },
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);
-    console.log('[Server] Vite middleware mounted for development.');
+    console.log(`[Server] Vite middleware mounted for development (HMR: ${!isHmrDisabled}).`);
   } else {
     // Production mode: serve built assets
     const distPath = path.resolve(__dirname, 'dist');
@@ -956,7 +976,7 @@ async function startServer() {
     console.log('[Server] Serving production build from dist/.');
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`[Sure Odd] Server running on port ${PORT}`);
   });
 }
