@@ -1,0 +1,6 @@
+{
+  "name": "Sure Odd — Sports Predictions & Live Scores",
+  "description": "Professional sports predictions, live match scores, free-to-play analytics, and sports community platform.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

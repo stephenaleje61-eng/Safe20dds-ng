@@ -1,0 +1,169 @@
+import os
+import subprocess
+
+src_image = "src/assets/images/sure_odd_official_logo_1791398086627.jpg"
+if not os.path.exists(src_image):
+    # Search for any jpg/png in src/assets/images
+    for f in os.listdir("src/assets/images"):
+        if f.endswith(".jpg") or f.endswith(".png"):
+            src_image = os.path.join("src/assets/images", f)
+            break
+
+print(f"Using source logo image: {src_image}")
+
+os.makedirs("public", exist_ok=True)
+os.makedirs("dist", exist_ok=True)
+
+# 1. Generate 512x512 any icon
+subprocess.run([
+    "convert", src_image,
+    "-resize", "512x512^",
+    "-gravity", "center",
+    "-extent", "512x512",
+    "public/pwa-512x512.png"
+], check=True)
+
+# 2. Generate 192x192 any icon
+subprocess.run([
+    "convert", "public/pwa-512x512.png",
+    "-resize", "192x192",
+    "public/pwa-192x192.png"
+], check=True)
+
+# 3. Generate 512x512 maskable icon with 15% safe-zone margin (inner content scaled to ~420px centered on black background)
+subprocess.run([
+    "convert", src_image,
+    "-resize", "420x420",
+    "-gravity", "center",
+    "-background", "#040404",
+    "-extent", "512x512",
+    "public/pwa-maskable-512x512.png"
+], check=True)
+
+# 4. Generate apple-touch-icon 180x180
+subprocess.run([
+    "convert", "public/pwa-512x512.png",
+    "-resize", "180x180",
+    "public/apple-touch-icon.png"
+], check=True)
+
+# 5. Generate favicon.ico (multi-resolution 16, 32, 48, 64)
+subprocess.run([
+    "convert", "public/pwa-512x512.png",
+    "-resize", "64x64",
+    "public/favicon.ico"
+], check=True)
+
+# Also copy to dist if dist exists so production builds have it
+for fname in ["pwa-512x512.png", "pwa-192x192.png", "pwa-maskable-512x512.png", "apple-touch-icon.png", "favicon.ico"]:
+    subprocess.run(["cp", f"public/{fname}", f"dist/{fname}"], check=False)
+
+# 6. Generate pristine vector public/icon.svg
+svg_content = '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FCD34D"/>
+      <stop offset="35%" stop-color="#F59E0B"/>
+      <stop offset="70%" stop-color="#D97706"/>
+      <stop offset="100%" stop-color="#B45309"/>
+    </linearGradient>
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#FEF08A"/>
+      <stop offset="50%" stop-color="#F59E0B"/>
+      <stop offset="100%" stop-color="#92400E"/>
+    </linearGradient>
+    <linearGradient id="whiteGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#E2E8F0"/>
+    </linearGradient>
+    <radialGradient id="ballShade" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="75%" stop-color="#CBD5E1"/>
+      <stop offset="100%" stop-color="#64748B"/>
+    </radialGradient>
+    <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#F59E0B" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- Dark Rounded Square Container -->
+  <rect x="8" y="8" width="496" height="496" rx="105" fill="#050505"/>
+  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="url(#goldGrad)" stroke-width="12" filter="url(#goldGlow)"/>
+  
+  <!-- Outer Circular Ring -->
+  <circle cx="256" cy="256" r="186" fill="none" stroke="url(#goldGrad)" stroke-width="7" opacity="0.95"/>
+
+  <!-- Crown at Top -->
+  <g filter="url(#goldGlow)">
+    <!-- Crown base & peaks -->
+    <path d="M 186 160 L 165 92 L 208 126 L 256 68 L 304 126 L 347 92 L 326 160 Z" fill="url(#goldShine)"/>
+    <!-- Pearl dots on tips -->
+    <circle cx="165" cy="90" r="9" fill="url(#goldShine)"/>
+    <circle cx="208" cy="124" r="8" fill="url(#goldShine)"/>
+    <circle cx="256" cy="66" r="11" fill="url(#goldShine)"/>
+    <circle cx="304" cy="124" r="8" fill="url(#goldShine)"/>
+    <circle cx="347" cy="90" r="9" fill="url(#goldShine)"/>
+  </g>
+
+  <!-- Football / Soccer Ball (Center) -->
+  <g transform="translate(256, 206)">
+    <circle cx="0" cy="0" r="54" fill="url(#ballShade)"/>
+    <!-- Pentagons / Hexagons -->
+    <polygon points="0,-18 17,-5 11,15 -11,15 -17,-5" fill="#111827"/>
+    <polygon points="0,-18 17,-5 36,-14 30,-32 10,-35" fill="#111827"/>
+    <polygon points="-17,-5 0,-18 -10,-35 -30,-32 -36,-14" fill="#111827"/>
+    <polygon points="17,-5 11,15 28,30 45,20 45,0" fill="#111827"/>
+    <polygon points="-11,15 -17,-5 -45,0 -45,20 -28,30" fill="#111827"/>
+    <polygon points="11,15 -11,15 -16,36 0,47 16,36" fill="#111827"/>
+    <!-- Rim shading -->
+    <circle cx="0" cy="0" r="54" fill="none" stroke="#000000" stroke-width="2" opacity="0.6"/>
+  </g>
+
+  <!-- Golden S-Ribbon Upper Curve -->
+  <path d="M 230 134 C 270 120 326 140 338 184 C 344 204 330 226 312 240 C 274 270 200 278 186 280 C 218 266 270 248 288 230 C 304 214 308 198 296 182 C 282 164 250 156 226 160 Z" fill="url(#goldGrad)" filter="url(#goldGlow)"/>
+  
+  <!-- White S-Ribbon Lower Curve -->
+  <path d="M 172 238 C 158 260 148 290 190 310 C 230 330 292 314 326 266 C 308 288 264 304 226 296 C 182 288 172 260 182 244 Z" fill="url(#whiteGrad)"/>
+
+  <!-- Chat Speech Bubbles on Right -->
+  <g transform="translate(358, 248)" filter="url(#goldGlow)">
+    <!-- Gold background bubble (offset) -->
+    <rect x="-10" y="8" width="54" height="42" rx="14" fill="url(#goldGrad)"/>
+    <polygon points="26,48 38,58 32,46" fill="url(#goldGrad)"/>
+
+    <!-- White front bubble -->
+    <rect x="-24" y="-18" width="62" height="48" rx="16" fill="#FFFFFF"/>
+    <polygon points="-16,28 -28,38 -20,24" fill="#FFFFFF"/>
+    <!-- 3 Message Dots -->
+    <circle cx="-6" cy="6" r="4.5" fill="#111827"/>
+    <circle cx="7" cy="6" r="4.5" fill="#111827"/>
+    <circle cx="20" cy="6" r="4.5" fill="#111827"/>
+  </g>
+
+  <!-- Community People Silhouettes & Bottom Wing Shield -->
+  <g filter="url(#goldGlow)">
+    <!-- Bottom Winged Shield / Crescent Pedestal -->
+    <path d="M 126 340 Q 256 462 386 340 Q 256 422 126 340 Z" fill="url(#goldGrad)"/>
+    <path d="M 160 354 Q 256 442 352 354 Q 256 414 160 354 Z" fill="url(#goldShine)" opacity="0.6"/>
+
+    <!-- Left Person Silhouette -->
+    <circle cx="206" cy="342" r="14" fill="url(#goldGrad)"/>
+    <path d="M 186 384 C 186 364 226 364 226 384 Z" fill="url(#goldGrad)"/>
+
+    <!-- Center Person Silhouette (Leader) -->
+    <circle cx="256" cy="326" r="18" fill="url(#goldGrad)"/>
+    <path d="M 230 384 C 230 358 282 358 282 384 Z" fill="url(#goldGrad)"/>
+
+    <!-- Right Person Silhouette -->
+    <circle cx="306" cy="342" r="14" fill="url(#goldGrad)"/>
+    <path d="M 286 384 C 286 364 326 364 326 384 Z" fill="url(#goldGrad)"/>
+  </g>
+</svg>'''
+
+with open("public/icon.svg", "w") as f:
+    f.write(svg_content)
+
+with open("dist/icon.svg", "w") as f:
+    f.write(svg_content)
+
+print("PWA and App Icon generation completed successfully!")
